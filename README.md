@@ -83,24 +83,7 @@ dashboard the moment they sign in.
 
 ---
 
-## 4. Built-in Business Rules
-
-The module enforces the rules typically expected of an OT system:
-
-1. **Date must be today or later** — past days cannot be back-filled from
-   this screen.
-2. **Date must stay in the current month** — leaders cannot schedule OT
-   into next month.
-3. **End time must be after start time.**
-4. **No past time slots** — if the leader picks *today*, the end time
-   must still be in the future.
-5. **At least one worker required** on every ticket.
-6. **Drafts are invisible to workers and management** — workers only see
-   tickets the leader has explicitly **Approved**.
-
----
-
-## 5. Multilingual Interface
+## 4. Multilingual Interface
 
 Every screen is fully translated into:
 
@@ -114,7 +97,7 @@ logout / login cycles.
 
 ---
 
-## 6. Demo Accounts
+## 5. Demo Accounts
 
 The shared password for **all** accounts is `demo@123`.
 
@@ -137,7 +120,7 @@ accounts, so reviewers do not have to type credentials.
 
 ---
 
-## 7. Suggested 3-minute Walk-through
+## 6. Suggested 3-minute Walk-through
 
 A short script for presenting the module to management:
 
@@ -156,26 +139,7 @@ A short script for presenting the module to management:
 
 ---
 
-## 8. Technical Notes (for IT)
-
-- **Front-end only**, single-page web application (React, served as a
-  static site). No backend or database is required for the demo.
-- **Data store**: the browser's `localStorage`. Seed data (accounts,
-  tickets for prior days of the current month) is created automatically
-  on first visit, so the dashboards are never empty.
-- **Hosting**: deployed as a static site on Render.com from the GitHub
-  repository, with automatic redeploy on every commit to `main`.
-- **Source**:
-  [github.com/tamnt027/demotangcaduongdai](https://github.com/tamnt027/demotangcaduongdai)
-
-A production version would add a real backend (REST API + database) for
-multi-device data sharing and audit logging, plus integration with the
-company HR / payroll system. The current demo proves the user flows and
-the UX; the back-end work is a separate engineering task.
-
----
-
-## 9. Contact
+## 7. Contact
 
 **Demo by Tam Ng** — `0777623579`
 
