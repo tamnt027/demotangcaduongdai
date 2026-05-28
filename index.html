@@ -172,6 +172,8 @@
       teamName1: 'Production Team 1',
       teamName2: 'Production Team 2',
       mgmt: 'Management',
+      allTeams: 'All Teams',
+      filterTeam: 'Team',
       // detail
       ticketDetail: 'Ticket Detail',
       close: 'Close',
@@ -261,6 +263,8 @@
       teamName1: 'Tổ Sản xuất 1',
       teamName2: 'Tổ Sản xuất 2',
       mgmt: 'Ban quản lý',
+      allTeams: 'Tất cả các tổ',
+      filterTeam: 'Tổ',
       ticketDetail: 'Chi tiết phiếu',
       close: 'Đóng',
       by: 'Bởi',
@@ -348,6 +352,8 @@
       teamName1: '生产一组',
       teamName2: '生产二组',
       mgmt: '管理层',
+      allTeams: '全部组别',
+      filterTeam: '组别',
       ticketDetail: '加班单详情',
       close: '关闭',
       by: '创建者',
@@ -1158,12 +1164,32 @@
     const { tickets } = useTickets();
     const users = load(STORAGE_KEYS.USERS, SEED_USERS);
     const [filter, setFilter] = useState({ mode: 'month', day: todayYMD() });
+    const [teamFilter, setTeamFilter] = useState('all'); // 'all' | 1 | 2
     const [detail, setDetail] = useState(null);
 
     const range = filterRange(filter);
-    const filtered = useMemo(() => tickets.filter(tk => tk.status === STATUS.PUBLISHED && inRange(tk.date, range)),
-      [tickets, filter]);
+    const filtered = useMemo(() => tickets.filter(tk =>
+      tk.status === STATUS.PUBLISHED
+      && inRange(tk.date, range)
+      && (teamFilter === 'all' || tk.teamId === teamFilter)
+    ), [tickets, filter, teamFilter]);
     const stats = useMemo(() => computeStats(filtered, users), [filtered]);
+
+    // Per-team summary (independent of selected team filter, always shown)
+    const perTeam = useMemo(() => {
+      const inPeriod = tickets.filter(tk => tk.status === STATUS.PUBLISHED && inRange(tk.date, range));
+      return [1, 2].map(tid => {
+        const teamTickets = inPeriod.filter(tk => tk.teamId === tid);
+        const s = computeStats(teamTickets, users);
+        return { teamId: tid, ...s };
+      });
+    }, [tickets, filter]);
+
+    const teamTabs = [
+      { id: 'all', label: t('allTeams') },
+      { id: 1,     label: t('teamName1') },
+      { id: 2,     label: t('teamName2') },
+    ];
 
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
@@ -1172,10 +1198,52 @@
           <p className="text-sm text-slate-500">{t('mgmt')}</p>
         </div>
 
-        <Card className="p-4">
+        <Card className="p-4 space-y-3">
           <FilterBar filter={filter} setFilter={setFilter} />
-          <div className="text-xs text-slate-500 mt-2">{t('summaryFor')}: <span className="font-semibold text-slate-700">{rangeLabel(filter, t, lang)}</span></div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs uppercase font-semibold text-slate-500">{t('filterTeam')}:</span>
+            <div className="inline-flex bg-slate-100 rounded-lg p-1">
+              {teamTabs.map(tab => (
+                <button key={tab.id} onClick={()=>setTeamFilter(tab.id)}
+                  className={`px-3 py-1.5 text-sm rounded-md font-medium transition ${teamFilter===tab.id ? 'bg-white shadow text-brand-700' : 'text-slate-600 hover:text-slate-800'}`}>
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="text-xs text-slate-500">{t('summaryFor')}: <span className="font-semibold text-slate-700">{rangeLabel(filter, t, lang)}</span></div>
         </Card>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {perTeam.map(team => {
+            const isActive = teamFilter === team.teamId || teamFilter === 'all';
+            return (
+              <button key={team.teamId} onClick={()=>setTeamFilter(team.teamId)}
+                className={`text-left p-5 rounded-2xl border bg-white shadow-sm transition ${
+                  teamFilter === team.teamId ? 'border-brand-400 ring-2 ring-brand-100' : 'border-slate-100 hover:border-slate-300'
+                } ${isActive ? '' : 'opacity-60'}`}>
+                <div className="flex items-center justify-between">
+                  <div className="text-sm font-semibold text-slate-800">{getTeamLabel(team.teamId, t)}</div>
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-brand-50 text-brand-700 font-semibold">{team.ticketCount} {t('tickets').toLowerCase()}</span>
+                </div>
+                <div className="mt-3 grid grid-cols-3 gap-3 text-xs">
+                  <div>
+                    <div className="text-slate-500">{t('totalHours')}</div>
+                    <div className="font-bold text-lg text-slate-800">{round1(team.totalHours)}<span className="text-xs font-medium text-slate-500"> {t('hoursShort')}</span></div>
+                  </div>
+                  <div>
+                    <div className="text-slate-500">{t('uniqueWorkers')}</div>
+                    <div className="font-bold text-lg text-slate-800">{team.uniqueWorkers}</div>
+                  </div>
+                  <div>
+                    <div className="text-slate-500">{t('avgPerWorker')}</div>
+                    <div className="font-bold text-lg text-slate-800">{round1(team.avgPerWorker)}<span className="text-xs font-medium text-slate-500"> {t('hoursShort')}</span></div>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StatTile label={t('totalHours')} value={`${round1(stats.totalHours)} ${t('hoursShort')}`} accent="brand" />
