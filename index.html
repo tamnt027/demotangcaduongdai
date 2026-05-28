@@ -1,0 +1,1268 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cuong Dai - Overtime Management Demo</title>
+  <link rel="icon" href="images/logo3d.png" />
+
+  <!-- Tailwind via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50:  '#eef6ff',
+              100: '#d9eaff',
+              200: '#b6d4ff',
+              300: '#85b6ff',
+              400: '#4f8eff',
+              500: '#2667ff',
+              600: '#1248db',
+              700: '#0d39ad',
+              800: '#0e3187',
+              900: '#102c6c',
+            },
+            accent: {
+              500: '#15b87a',
+              600: '#0e9461',
+            }
+          },
+          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] }
+        }
+      }
+    }
+  </script>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- React + Babel via CDN -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    html, body, #root { height: 100%; }
+    body { font-family: 'Inter', system-ui, sans-serif; background: #f4f7fb; }
+    .lang-flag { width: 28px; height: 20px; border-radius: 3px; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+    .scroll-soft::-webkit-scrollbar { width: 8px; height: 8px; }
+    .scroll-soft::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    .fade-in { animation: fade .25s ease both; }
+    @keyframes fade { from { opacity:0; transform: translateY(4px);} to {opacity:1; transform:none;} }
+    .login-bg {
+      background:
+        radial-gradient(1200px 600px at 80% -10%, #cfe1ff 0%, transparent 60%),
+        radial-gradient(900px 500px at -10% 110%, #b8e0d2 0%, transparent 60%),
+        linear-gradient(180deg, #f4f7fb 0%, #eaf1fb 100%);
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel" data-presets="react">
+  /* ===================================================================
+     Cuong Dai Packaging — Overtime Management Demo
+     Single-file React app. Data persisted in localStorage.
+     =================================================================== */
+
+  const { useState, useEffect, useMemo, useContext, useCallback, createContext, useRef } = React;
+
+  /* -------------------- Constants -------------------- */
+  const ROLES = { MANAGER: 'manager', LEADER: 'leader', WORKER: 'worker' };
+  const STATUS = { DRAFT: 'draft', PUBLISHED: 'published' };
+  const LANGS = ['en', 'vi', 'zh'];
+  const DEMO_PASSWORD = 'demo@123';
+
+  const STORAGE_KEYS = {
+    USERS: 'cd_users_v2',
+    TICKETS: 'cd_tickets_v2',
+    CURRENT: 'cd_current_user_v2',
+    LANG: 'cd_lang_v1',
+  };
+
+  /* -------------------- Translations -------------------- */
+  const TR = {
+    en: {
+      appTitle: 'Overtime Management Demo',
+      company: 'Cuong Dai Packaging',
+      login: 'Sign in',
+      username: 'Username',
+      password: 'Password',
+      passwordHint: 'Password for all demo accounts: ',
+      signIn: 'Sign in',
+      invalidLogin: 'Invalid username or password',
+      logout: 'Sign out',
+      demoAccounts: 'Demo accounts',
+      role: 'Role',
+      manager: 'Manager',
+      leader: 'Team Leader',
+      worker: 'Worker',
+      hello: 'Hello',
+      // tabs / sections
+      dashboard: 'Dashboard',
+      myTickets: 'My Overtime Tickets',
+      allTickets: 'All Overtime Tickets',
+      createTicket: 'New Overtime Ticket',
+      newTicket: '+ Create Ticket',
+      filterBy: 'Filter',
+      today: 'Today',
+      thisWeek: 'This week',
+      thisMonth: 'This month',
+      pickDay: 'Pick a day',
+      from: 'From',
+      to: 'To',
+      // stats
+      stats: 'Statistics',
+      totalHours: 'Total OT Hours',
+      uniqueWorkers: 'Workers in OT',
+      avgPerWorker: 'Avg / Worker',
+      totalSessions: 'OT Sessions',
+      avgPerSession: 'Avg / Session',
+      perPerson: 'Overtime per Person',
+      // ticket form
+      date: 'Date',
+      startTime: 'Start Time',
+      endTime: 'End Time',
+      reason: 'Reason / Note',
+      reasonPh: 'e.g. Urgent order for client X',
+      workers: 'Workers',
+      includeSelf: 'Include myself in this ticket',
+      selectWorkers: 'Select workers',
+      selectAll: 'Select all',
+      clear: 'Clear',
+      submit: 'Create',
+      cancel: 'Cancel',
+      // ticket card
+      status: 'Status',
+      draft: 'Draft',
+      published: 'Approved',
+      approve: 'Approve',
+      delete: 'Delete',
+      created: 'Created',
+      durationHours: 'Duration',
+      hoursShort: 'h',
+      noTickets: 'No overtime tickets in this period.',
+      noTicketsCreate: 'Create your first ticket using the button above.',
+      // worker view
+      dailyOvertime: 'Daily Overtime — This Month',
+      monthlyStats: 'This Month Statistics',
+      recorded: 'Recorded',
+      notRecorded: 'No overtime',
+      day: 'Day',
+      hours: 'Hours',
+      tickets: 'Tickets',
+      // manager view
+      companyOverview: 'Company Overview',
+      peopleList: 'People',
+      name: 'Name',
+      team: 'Team',
+      times: 'Times',
+      averageH: 'Avg (h)',
+      noData: 'No data available for this period.',
+      // validation
+      errDate: 'Date must be today or later in this month.',
+      errTime: 'End time must be after start time.',
+      errPastTime: 'Cannot create overtime for a time that has already passed.',
+      errNoWorkers: 'Please select at least one worker.',
+      errMonth: 'Overtime date must remain within the current month.',
+      confirmDelete: 'Delete this overtime ticket?',
+      teamName1: 'Production Team 1',
+      teamName2: 'Production Team 2',
+      mgmt: 'Management',
+      // detail
+      ticketDetail: 'Ticket Detail',
+      close: 'Close',
+      by: 'By',
+      // login footer
+      footer: '© 2026 Cuong Dai Packaging — Demo by Tam Ng · 0777623579',
+      pickADay: 'Pick day',
+      summaryFor: 'Showing data for',
+    },
+    vi: {
+      appTitle: 'Demo Quản lý phiếu tăng ca',
+      company: 'Bao bì Cường Đại',
+      login: 'Đăng nhập',
+      username: 'Tên đăng nhập',
+      password: 'Mật khẩu',
+      passwordHint: 'Mật khẩu cho tất cả tài khoản demo: ',
+      signIn: 'Đăng nhập',
+      invalidLogin: 'Sai tên đăng nhập hoặc mật khẩu',
+      logout: 'Đăng xuất',
+      demoAccounts: 'Tài khoản demo',
+      role: 'Vai trò',
+      manager: 'Quản lý',
+      leader: 'Tổ trưởng',
+      worker: 'Công nhân sản xuất',
+      hello: 'Xin chào',
+      dashboard: 'Tổng quan',
+      myTickets: 'Phiếu tăng ca của tôi',
+      allTickets: 'Tất cả phiếu tăng ca',
+      createTicket: 'Tạo phiếu tăng ca',
+      newTicket: '+ Tạo phiếu',
+      filterBy: 'Bộ lọc',
+      today: 'Hôm nay',
+      thisWeek: 'Tuần này',
+      thisMonth: 'Tháng này',
+      pickDay: 'Chọn ngày',
+      from: 'Từ',
+      to: 'Đến',
+      stats: 'Thống kê',
+      totalHours: 'Tổng giờ tăng ca',
+      uniqueWorkers: 'Số người tăng ca',
+      avgPerWorker: 'TB / Người',
+      totalSessions: 'Số lần tăng ca',
+      avgPerSession: 'TB / Lần',
+      perPerson: 'Tăng ca theo từng người',
+      date: 'Ngày',
+      startTime: 'Bắt đầu',
+      endTime: 'Kết thúc',
+      reason: 'Lý do / Ghi chú',
+      reasonPh: 'VD: Đơn gấp cho khách X',
+      workers: 'Công nhân',
+      includeSelf: 'Đưa tôi vào phiếu này',
+      selectWorkers: 'Chọn công nhân',
+      selectAll: 'Chọn tất cả',
+      clear: 'Bỏ chọn',
+      submit: 'Tạo phiếu',
+      cancel: 'Hủy',
+      status: 'Trạng thái',
+      draft: 'Nháp',
+      published: 'Đã duyệt',
+      approve: 'Duyệt',
+      delete: 'Xóa',
+      created: 'Tạo lúc',
+      durationHours: 'Thời lượng',
+      hoursShort: 'giờ',
+      noTickets: 'Không có phiếu tăng ca trong khoảng thời gian này.',
+      noTicketsCreate: 'Tạo phiếu đầu tiên của bạn bằng nút phía trên.',
+      dailyOvertime: 'Tăng ca theo ngày — Tháng này',
+      monthlyStats: 'Thống kê tháng này',
+      recorded: 'Đã ghi nhận',
+      notRecorded: 'Không tăng ca',
+      day: 'Ngày',
+      hours: 'Giờ',
+      tickets: 'Phiếu',
+      companyOverview: 'Tổng quan công ty',
+      peopleList: 'Danh sách nhân sự',
+      name: 'Họ tên',
+      team: 'Tổ',
+      times: 'Số lần',
+      averageH: 'TB (giờ)',
+      noData: 'Không có dữ liệu trong khoảng thời gian này.',
+      errDate: 'Ngày phải là hôm nay hoặc sau, và trong tháng hiện tại.',
+      errTime: 'Giờ kết thúc phải sau giờ bắt đầu.',
+      errPastTime: 'Không thể tạo tăng ca cho khung giờ đã qua.',
+      errNoWorkers: 'Vui lòng chọn ít nhất một công nhân.',
+      errMonth: 'Ngày tăng ca phải nằm trong tháng hiện tại.',
+      confirmDelete: 'Xóa phiếu tăng ca này?',
+      teamName1: 'Tổ Sản xuất 1',
+      teamName2: 'Tổ Sản xuất 2',
+      mgmt: 'Ban quản lý',
+      ticketDetail: 'Chi tiết phiếu',
+      close: 'Đóng',
+      by: 'Bởi',
+      footer: '© 2026 Bao bì Cường Đại — Demo by Tam Ng · 0777623579',
+      pickADay: 'Chọn ngày',
+      summaryFor: 'Hiển thị dữ liệu cho',
+    },
+    zh: {
+      appTitle: '加班单管理演示',
+      company: '强大包装',
+      login: '登录',
+      username: '用户名',
+      password: '密码',
+      passwordHint: '所有演示账号的密码: ',
+      signIn: '登录',
+      invalidLogin: '用户名或密码错误',
+      logout: '退出',
+      demoAccounts: '演示账号',
+      role: '角色',
+      manager: '管理员',
+      leader: '组长',
+      worker: '生产工人',
+      hello: '你好',
+      dashboard: '总览',
+      myTickets: '我的加班单',
+      allTickets: '全部加班单',
+      createTicket: '新建加班单',
+      newTicket: '+ 新建',
+      filterBy: '筛选',
+      today: '今天',
+      thisWeek: '本周',
+      thisMonth: '本月',
+      pickDay: '选择日期',
+      from: '从',
+      to: '至',
+      stats: '统计',
+      totalHours: '加班总小时',
+      uniqueWorkers: '加班人数',
+      avgPerWorker: '人均',
+      totalSessions: '加班次数',
+      avgPerSession: '次均',
+      perPerson: '按人员统计',
+      date: '日期',
+      startTime: '开始时间',
+      endTime: '结束时间',
+      reason: '原因 / 备注',
+      reasonPh: '例如: 客户X紧急订单',
+      workers: '工人',
+      includeSelf: '把我加入此单',
+      selectWorkers: '选择工人',
+      selectAll: '全选',
+      clear: '清空',
+      submit: '创建',
+      cancel: '取消',
+      status: '状态',
+      draft: '草稿',
+      published: '已批准',
+      approve: '批准',
+      delete: '删除',
+      created: '创建时间',
+      durationHours: '时长',
+      hoursShort: '小时',
+      noTickets: '本期间内无加班单。',
+      noTicketsCreate: '请用上方按钮创建第一张加班单。',
+      dailyOvertime: '本月每日加班',
+      monthlyStats: '本月统计',
+      recorded: '已记录',
+      notRecorded: '无加班',
+      day: '日',
+      hours: '小时',
+      tickets: '单数',
+      companyOverview: '公司总览',
+      peopleList: '人员',
+      name: '姓名',
+      team: '组别',
+      times: '次数',
+      averageH: '平均 (时)',
+      noData: '本期间内无数据。',
+      errDate: '日期必须是今天或之后,且在本月内。',
+      errTime: '结束时间必须晚于开始时间。',
+      errPastTime: '不能为已过去的时间段创建加班。',
+      errNoWorkers: '请至少选择一名工人。',
+      errMonth: '加班日期必须在本月内。',
+      confirmDelete: '删除此加班单?',
+      teamName1: '生产一组',
+      teamName2: '生产二组',
+      mgmt: '管理层',
+      ticketDetail: '加班单详情',
+      close: '关闭',
+      by: '创建者',
+      footer: '© 2026 强大包装 — Demo by Tam Ng · 0777623579',
+      pickADay: '选择日期',
+      summaryFor: '当前显示数据范围',
+    }
+  };
+
+  /* -------------------- Seed data -------------------- */
+  const SEED_USERS = [
+    { id: 'u-gd',  username: 'gd',  password: DEMO_PASSWORD, role: ROLES.MANAGER, name: 'Liu Xiao Yong',   teamId: 0 },
+    { id: 'u-tt1', username: 'tt1', password: DEMO_PASSWORD, role: ROLES.LEADER,  name: 'Trần Thanh Bình', teamId: 1 },
+    { id: 'u-tt2', username: 'tt2', password: DEMO_PASSWORD, role: ROLES.LEADER,  name: 'Lê Minh Quân',    teamId: 2 },
+    { id: 'u-cn1', username: 'cn1', password: DEMO_PASSWORD, role: ROLES.WORKER,  name: 'Phạm Văn Hùng',   teamId: 1 },
+    { id: 'u-cn2', username: 'cn2', password: DEMO_PASSWORD, role: ROLES.WORKER,  name: 'Vũ Thị Hà',       teamId: 1 },
+    { id: 'u-cn3', username: 'cn3', password: DEMO_PASSWORD, role: ROLES.WORKER,  name: 'Đỗ Quốc Tâm',     teamId: 1 },
+    { id: 'u-cn4', username: 'cn4', password: DEMO_PASSWORD, role: ROLES.WORKER,  name: 'Bùi Thị Nga',     teamId: 1 },
+    { id: 'u-cn5', username: 'cn5', password: DEMO_PASSWORD, role: ROLES.WORKER,  name: 'Hoàng Văn Sơn',   teamId: 2 },
+    { id: 'u-cn6', username: 'cn6', password: DEMO_PASSWORD, role: ROLES.WORKER,  name: 'Mai Thị Lan',     teamId: 2 },
+    { id: 'u-cn7', username: 'cn7', password: DEMO_PASSWORD, role: ROLES.WORKER,  name: 'Ngô Tiến Đạt',    teamId: 2 },
+    { id: 'u-cn8', username: 'cn8', password: DEMO_PASSWORD, role: ROLES.WORKER,  name: 'Trịnh Thị Yến',   teamId: 2 },
+  ];
+
+  function getTeamLabel(teamId, t) {
+    if (teamId === 1) return t('teamName1');
+    if (teamId === 2) return t('teamName2');
+    return t('mgmt');
+  }
+
+  /* -------------------- Date helpers -------------------- */
+  const pad = n => String(n).padStart(2, '0');
+  const ymd = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  const todayYMD = () => ymd(new Date());
+  const parseYMD = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
+  const sameMonth = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
+  const startOfWeek = d => { // ISO Monday
+    const c = new Date(d); const day = (c.getDay()+6)%7;
+    c.setHours(0,0,0,0); c.setDate(c.getDate() - day); return c;
+  };
+  const endOfWeek = d => { const s = startOfWeek(d); const e = new Date(s); e.setDate(s.getDate()+6); e.setHours(23,59,59,999); return e; };
+  const startOfMonth = d => new Date(d.getFullYear(), d.getMonth(), 1);
+  const endOfMonth = d => new Date(d.getFullYear(), d.getMonth()+1, 0, 23,59,59,999);
+
+  function calcHours(start, end) {
+    const [sh, sm] = start.split(':').map(Number);
+    const [eh, em] = end.split(':').map(Number);
+    const mins = (eh*60+em) - (sh*60+sm);
+    return Math.max(0, mins/60);
+  }
+  function round1(n) { return Math.round(n*10)/10; }
+
+  function formatDateLocale(s, lang) {
+    const d = parseYMD(s);
+    const map = { en: 'en-US', vi: 'vi-VN', zh: 'zh-CN' };
+    return d.toLocaleDateString(map[lang] || 'en-US', { weekday:'short', year:'numeric', month:'short', day:'numeric' });
+  }
+
+  /* -------------------- Storage helpers -------------------- */
+  function load(key, fallback) {
+    try {
+      const v = localStorage.getItem(key);
+      return v ? JSON.parse(v) : fallback;
+    } catch { return fallback; }
+  }
+  function save(key, val) {
+    try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
+  }
+
+  /* -------------------- Seed tickets (deterministic, based on today) -------------------- */
+  function generateSeedTickets() {
+    // Generate tickets for the previous 14 days inside the CURRENT month only,
+    // so demo always has fresh data without violating "in current month" rule.
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const monthStart = startOfMonth(today);
+    const tickets = [];
+    let id = 1;
+
+    const teamWorkers = (teamId) => SEED_USERS.filter(u => u.teamId === teamId && u.role === ROLES.WORKER).map(u => u.id);
+    const leaderOf = (teamId) => SEED_USERS.find(u => u.teamId === teamId && u.role === ROLES.LEADER);
+
+    // For each past day in this month up to yesterday, possibly add tickets.
+    for (let d = new Date(monthStart); d <= today; d.setDate(d.getDate()+1)) {
+      // Skip today to keep "today" empty for the demo to add new tickets
+      if (d.getTime() === today.getTime()) continue;
+      const dateStr = ymd(d);
+      // Pseudo-random based on day number
+      const dayNum = d.getDate();
+      [1, 2].forEach(teamId => {
+        const seed = (dayNum * 31 + teamId * 17) % 100;
+        if (seed < 70) { // most weekdays have OT
+          const leader = leaderOf(teamId);
+          const workers = teamWorkers(teamId);
+          // pick some subset
+          const cnt = 2 + (seed % 3); // 2..4 workers
+          const chosen = [];
+          for (let i=0; i<cnt; i++) chosen.push(workers[(seed+i) % workers.length]);
+          const startHour = 17 + ((seed % 2));
+          const endHour   = startHour + 2 + (seed % 3);
+          const start = `${pad(startHour)}:30`;
+          const end   = `${pad(Math.min(endHour, 22))}:00`;
+          tickets.push({
+            id: `t-${id++}`,
+            date: dateStr,
+            startTime: start,
+            endTime: end,
+            workerIds: Array.from(new Set(chosen)),
+            createdBy: leader.id,
+            teamId,
+            reason: '',
+            status: STATUS.PUBLISHED,
+            createdAt: new Date(d.getFullYear(), d.getMonth(), d.getDate(), 9, 0).toISOString(),
+          });
+        }
+      });
+    }
+    return tickets;
+  }
+
+  function initStorage() {
+    if (!load(STORAGE_KEYS.USERS, null)) save(STORAGE_KEYS.USERS, SEED_USERS);
+    if (!load(STORAGE_KEYS.TICKETS, null)) save(STORAGE_KEYS.TICKETS, generateSeedTickets());
+  }
+  initStorage();
+
+  /* -------------------- i18n -------------------- */
+  const I18nCtx = createContext(null);
+  function I18nProvider({ children }) {
+    const [lang, setLangState] = useState(() => load(STORAGE_KEYS.LANG, 'en'));
+    const setLang = (l) => {
+      if (!LANGS.includes(l)) return;
+      setLangState(l);
+      save(STORAGE_KEYS.LANG, l);
+    };
+    const t = useCallback((k) => (TR[lang] && TR[lang][k]) || TR.en[k] || k, [lang]);
+    return <I18nCtx.Provider value={{ lang, setLang, t }}>{children}</I18nCtx.Provider>;
+  }
+  const useT = () => useContext(I18nCtx);
+
+  /* -------------------- Auth -------------------- */
+  const AuthCtx = createContext(null);
+  function AuthProvider({ children }) {
+    const [user, setUser] = useState(() => load(STORAGE_KEYS.CURRENT, null));
+    const login = (username, password) => {
+      const users = load(STORAGE_KEYS.USERS, SEED_USERS);
+      const u = users.find(x => x.username.toLowerCase() === username.toLowerCase().trim() && x.password === password);
+      if (!u) return false;
+      const safe = { ...u }; delete safe.password;
+      setUser(safe); save(STORAGE_KEYS.CURRENT, safe);
+      return true;
+    };
+    const logout = () => { setUser(null); localStorage.removeItem(STORAGE_KEYS.CURRENT); };
+    return <AuthCtx.Provider value={{ user, login, logout }}>{children}</AuthCtx.Provider>;
+  }
+  const useAuth = () => useContext(AuthCtx);
+
+  /* -------------------- Tickets store hook -------------------- */
+  function useTickets() {
+    const [tickets, setTickets] = useState(() => load(STORAGE_KEYS.TICKETS, []));
+    useEffect(() => { save(STORAGE_KEYS.TICKETS, tickets); }, [tickets]);
+    const add = (t) => setTickets(prev => [t, ...prev]);
+    const update = (id, patch) => setTickets(prev => prev.map(t => t.id === id ? { ...t, ...patch } : t));
+    const remove = (id) => setTickets(prev => prev.filter(t => t.id !== id));
+    return { tickets, setTickets, add, update, remove };
+  }
+
+  /* -------------------- Flag SVGs -------------------- */
+  const flags = {
+    en: (
+      <svg viewBox="0 0 60 30" className="lang-flag" xmlns="http://www.w3.org/2000/svg" aria-label="English">
+        <clipPath id="s"><path d="M0,0 v30 h60 v-30 z"/></clipPath>
+        <clipPath id="t"><path d="M30,15 h30 v15 z v15 h-30 z h-30 v-15 z v-15 h30 z"/></clipPath>
+        <g clipPath="url(#s)">
+          <path d="M0,0 v30 h60 v-30 z" fill="#012169"/>
+          <path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" strokeWidth="6"/>
+          <path d="M0,0 L60,30 M60,0 L0,30" clipPath="url(#t)" stroke="#C8102E" strokeWidth="4"/>
+          <path d="M30,0 v30 M0,15 h60" stroke="#fff" strokeWidth="10"/>
+          <path d="M30,0 v30 M0,15 h60" stroke="#C8102E" strokeWidth="6"/>
+        </g>
+      </svg>
+    ),
+    vi: (
+      <svg viewBox="0 0 30 20" className="lang-flag" xmlns="http://www.w3.org/2000/svg" aria-label="Tiếng Việt">
+        <rect width="30" height="20" fill="#da251d"/>
+        <polygon points="15,4 16.76,9.42 22.46,9.42 17.85,12.76 19.61,18.18 15,14.84 10.39,18.18 12.15,12.76 7.54,9.42 13.24,9.42" fill="#ff0"/>
+      </svg>
+    ),
+    zh: (
+      <svg viewBox="0 0 30 20" className="lang-flag" xmlns="http://www.w3.org/2000/svg" aria-label="中文">
+        <rect width="30" height="20" fill="#de2910"/>
+        <g fill="#ffde00">
+          <polygon points="6,3 7.18,6.62 10.99,6.62 7.9,8.85 9.09,12.47 6,10.24 2.91,12.47 4.1,8.85 1.01,6.62 4.82,6.62"/>
+          <polygon points="12.5,2 13.05,3.5 14.65,3.5 13.35,4.45 13.85,5.95 12.5,5 11.15,5.95 11.65,4.45 10.35,3.5 11.95,3.5" />
+          <polygon points="15,5 15.55,6.5 17.15,6.5 15.85,7.45 16.35,8.95 15,8 13.65,8.95 14.15,7.45 12.85,6.5 14.45,6.5" />
+          <polygon points="15,9 15.55,10.5 17.15,10.5 15.85,11.45 16.35,12.95 15,12 13.65,12.95 14.15,11.45 12.85,10.5 14.45,10.5" />
+          <polygon points="12.5,11.5 13.05,13 14.65,13 13.35,13.95 13.85,15.45 12.5,14.5 11.15,15.45 11.65,13.95 10.35,13 11.95,13" />
+        </g>
+      </svg>
+    ),
+  };
+
+  /* -------------------- Reusable UI -------------------- */
+  function Logo({ className = '' }) {
+    return <img src="images/logo3d.png" alt="Cuong Dai Packaging" className={className} />;
+  }
+
+  function Card({ children, className='' }) {
+    return <div className={`bg-white rounded-2xl shadow-sm border border-slate-100 ${className}`}>{children}</div>;
+  }
+
+  function Button({ children, variant='primary', className='', ...rest }) {
+    const styles = {
+      primary: 'bg-brand-600 hover:bg-brand-700 text-white shadow-sm',
+      ghost:   'bg-slate-100 hover:bg-slate-200 text-slate-700',
+      danger:  'bg-red-50 hover:bg-red-100 text-red-700 border border-red-100',
+      success: 'bg-accent-500 hover:bg-accent-600 text-white',
+      outline: 'border border-slate-200 hover:bg-slate-50 text-slate-700 bg-white',
+    };
+    return (
+      <button className={`px-4 py-2 rounded-lg font-medium text-sm transition disabled:opacity-50 disabled:cursor-not-allowed ${styles[variant]||styles.primary} ${className}`} {...rest}>
+        {children}
+      </button>
+    );
+  }
+
+  function StatTile({ label, value, sub, accent='brand' }) {
+    const ring = { brand: 'from-brand-50 to-white', green: 'from-emerald-50 to-white', amber: 'from-amber-50 to-white' }[accent];
+    return (
+      <div className={`p-5 rounded-2xl border border-slate-100 bg-gradient-to-br ${ring} shadow-sm`}>
+        <div className="text-xs uppercase tracking-wide text-slate-500 font-semibold">{label}</div>
+        <div className="mt-1 text-3xl font-bold text-slate-800">{value}</div>
+        {sub && <div className="text-xs text-slate-500 mt-1">{sub}</div>}
+      </div>
+    );
+  }
+
+  function RoleBadge({ role, t }) {
+    const tone = role === ROLES.MANAGER ? 'bg-amber-100 text-amber-800'
+              : role === ROLES.LEADER ? 'bg-brand-100 text-brand-800'
+              : 'bg-emerald-100 text-emerald-800';
+    return <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${tone}`}>{t(role)}</span>;
+  }
+
+  /* -------------------- Header -------------------- */
+  function Header() {
+    const { t } = useT();
+    const { user, logout } = useAuth();
+    if (!user) return null;
+    return (
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-4">
+          <Logo className="h-10 w-auto" />
+          <div className="hidden sm:block border-l border-slate-200 pl-4">
+            <div className="text-xs text-slate-500 leading-tight">{t('company')}</div>
+            <div className="text-sm font-semibold text-slate-800 leading-tight">{t('appTitle')}</div>
+          </div>
+          <div className="flex-1" />
+          <div className="text-right hidden sm:block">
+            <div className="text-sm font-semibold text-slate-800 leading-tight">{user.name}</div>
+            <div className="text-xs text-slate-500 leading-tight flex items-center gap-2 justify-end">
+              <RoleBadge role={user.role} t={t} />
+            </div>
+          </div>
+          <Button variant="ghost" onClick={logout}>{t('logout')}</Button>
+        </div>
+      </header>
+    );
+  }
+
+  /* -------------------- Credit chip (bottom-right) -------------------- */
+  function CreditChip() {
+    return (
+      <div className="fixed bottom-4 right-4 z-40 hidden sm:block">
+        <div className="bg-white/90 backdrop-blur border border-slate-200 rounded-full shadow-sm px-3 py-1.5 text-[11px] text-slate-600">
+          Demo by <span className="font-semibold text-slate-800">Tam Ng</span> · <span className="font-mono">0777623579</span>
+        </div>
+      </div>
+    );
+  }
+
+  /* -------------------- Language Switcher (bottom) -------------------- */
+  function LanguageSwitcher() {
+    const { lang, setLang } = useT();
+    return (
+      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40">
+        <div className="bg-white border border-slate-200 rounded-full shadow-md px-2 py-1 flex items-center gap-1">
+          {LANGS.map(l => (
+            <button
+              key={l}
+              onClick={() => setLang(l)}
+              title={l.toUpperCase()}
+              className={`p-1.5 rounded-full transition ${lang===l ? 'bg-brand-50 ring-2 ring-brand-300' : 'hover:bg-slate-50'}`}
+            >
+              {flags[l]}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  /* -------------------- Login Page -------------------- */
+  function LoginPage() {
+    const { t } = useT();
+    const { login } = useAuth();
+    const [username, setU] = useState('');
+    const [password, setP] = useState('');
+    const [err, setErr] = useState('');
+    const submit = (e) => {
+      e.preventDefault();
+      const ok = login(username, password);
+      if (!ok) setErr(t('invalidLogin'));
+    };
+    const quick = (uname) => { setU(uname); setP(DEMO_PASSWORD); setErr(''); };
+    const demoList = [
+      { uname:'gd',  role:'manager' },
+      { uname:'tt1', role:'leader' },
+      { uname:'tt2', role:'leader' },
+      { uname:'cn1', role:'worker' },
+      { uname:'cn5', role:'worker' },
+    ];
+    return (
+      <div className="login-bg min-h-screen flex items-center justify-center p-4">
+        <div className="w-full max-w-md fade-in">
+          <Card className="p-8">
+            <div className="flex flex-col items-center text-center">
+              <Logo className="h-16 w-auto mb-2" />
+              <div className="text-xs uppercase tracking-widest text-slate-500 mt-1">{t('company')}</div>
+              <h1 className="mt-2 text-2xl font-bold text-slate-800">{t('appTitle')}</h1>
+            </div>
+            <form onSubmit={submit} className="mt-6 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">{t('username')}</label>
+                <input value={username} onChange={e=>setU(e.target.value)} autoFocus
+                  className="w-full px-3 py-2.5 rounded-lg border border-slate-200 focus:border-brand-400 focus:ring-2 focus:ring-brand-100 outline-none" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">{t('password')}</label>
+                <input type="password" value={password} onChange={e=>setP(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-lg border border-slate-200 focus:border-brand-400 focus:ring-2 focus:ring-brand-100 outline-none" />
+              </div>
+              {err && <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{err}</div>}
+              <Button type="submit" className="w-full py-2.5">{t('signIn')}</Button>
+            </form>
+            <div className="mt-6 pt-5 border-t border-slate-100">
+              <div className="text-xs text-slate-500 mb-2">
+                {t('passwordHint')}<span className="font-mono font-semibold text-slate-700">{DEMO_PASSWORD}</span>
+              </div>
+              <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">{t('demoAccounts')}</div>
+              <div className="grid grid-cols-2 gap-2">
+                {demoList.map(d => (
+                  <button type="button" key={d.uname} onClick={()=>quick(d.uname)}
+                    className="text-left text-xs px-3 py-2 rounded-lg border border-slate-200 hover:border-brand-300 hover:bg-brand-50 transition">
+                    <div className="font-mono font-semibold text-slate-800">{d.uname}</div>
+                    <div className="text-slate-500">{t(d.role)}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </Card>
+          <div className="text-center text-xs text-slate-400 mt-4">{t('footer')}</div>
+        </div>
+      </div>
+    );
+  }
+
+  /* -------------------- Filter Bar -------------------- */
+  function FilterBar({ filter, setFilter, includeDay=true }) {
+    const { t } = useT();
+    const tabs = [
+      includeDay && { id:'day',   label: t('today') },
+      { id:'week',  label: t('thisWeek') },
+      { id:'month', label: t('thisMonth') },
+    ].filter(Boolean);
+    return (
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-xs uppercase font-semibold text-slate-500">{t('filterBy')}:</span>
+        <div className="inline-flex bg-slate-100 rounded-lg p-1">
+          {tabs.map(tab => (
+            <button key={tab.id} onClick={()=>setFilter(f => ({ ...f, mode: tab.id, day: tab.id==='day' ? todayYMD() : f.day }))}
+              className={`px-3 py-1.5 text-sm rounded-md font-medium transition ${filter.mode===tab.id ? 'bg-white shadow text-brand-700' : 'text-slate-600 hover:text-slate-800'}`}>
+              {tab.label}
+            </button>
+          ))}
+        </div>
+        {filter.mode === 'day' && (
+          <input type="date" value={filter.day}
+            onChange={e=>setFilter(f => ({ ...f, day: e.target.value }))}
+            className="px-2 py-1.5 text-sm rounded-lg border border-slate-200" />
+        )}
+      </div>
+    );
+  }
+
+  function filterRange(filter) {
+    const now = new Date();
+    if (filter.mode === 'day') {
+      const d = parseYMD(filter.day || todayYMD());
+      const e = new Date(d); e.setHours(23,59,59,999);
+      return [d, e];
+    }
+    if (filter.mode === 'week') return [startOfWeek(now), endOfWeek(now)];
+    return [startOfMonth(now), endOfMonth(now)];
+  }
+
+  function inRange(ticketDateStr, [start, end]) {
+    const d = parseYMD(ticketDateStr);
+    const e = new Date(d); e.setHours(23,59,59,999);
+    return d >= start && e <= end ? true : (d >= start && d <= end);
+  }
+
+  function rangeLabel(filter, t, lang) {
+    const [s, e] = filterRange(filter);
+    const map = { en: 'en-US', vi: 'vi-VN', zh: 'zh-CN' };
+    if (filter.mode === 'day') return new Date(s).toLocaleDateString(map[lang]||'en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+    return `${s.toLocaleDateString(map[lang]||'en-US')} — ${e.toLocaleDateString(map[lang]||'en-US')}`;
+  }
+
+  /* -------------------- Stats helpers -------------------- */
+  function computeStats(tickets, users) {
+    const published = tickets.filter(t => t.status === STATUS.PUBLISHED);
+    let totalHours = 0;
+    const perPerson = new Map(); // userId -> { hours, count }
+    for (const t of published) {
+      const h = calcHours(t.startTime, t.endTime);
+      for (const w of t.workerIds) {
+        totalHours += h;
+        const cur = perPerson.get(w) || { hours: 0, count: 0 };
+        cur.hours += h; cur.count += 1;
+        perPerson.set(w, cur);
+      }
+    }
+    const uniqueWorkers = perPerson.size;
+    const avgPerWorker = uniqueWorkers ? totalHours / uniqueWorkers : 0;
+    const list = Array.from(perPerson.entries()).map(([uid, s]) => {
+      const u = users.find(x => x.id === uid);
+      return { user: u, hours: s.hours, count: s.count, avg: s.count? s.hours/s.count : 0 };
+    }).sort((a,b) => b.hours - a.hours);
+    return { totalHours, uniqueWorkers, avgPerWorker, perPerson: list, ticketCount: published.length };
+  }
+
+  /* -------------------- Create Ticket Modal -------------------- */
+  function CreateTicketModal({ onClose, onCreate, leader, allUsers }) {
+    const { t } = useT();
+    const teamWorkers = allUsers.filter(u => u.teamId === leader.teamId && u.role === ROLES.WORKER);
+    const [date, setDate] = useState(todayYMD());
+    const [startTime, setStart] = useState('17:30');
+    const [endTime, setEnd] = useState('20:00');
+    const [reason, setReason] = useState('');
+    const [selected, setSelected] = useState(new Set(teamWorkers.map(u => u.id)));
+    const [includeSelf, setIncludeSelf] = useState(false);
+    const [err, setErr] = useState('');
+
+    const toggle = (id) => {
+      setSelected(prev => {
+        const n = new Set(prev);
+        if (n.has(id)) n.delete(id); else n.add(id);
+        return n;
+      });
+    };
+
+    const submit = (e) => {
+      e.preventDefault();
+      const now = new Date();
+      const d = parseYMD(date);
+      const todayD = parseYMD(todayYMD());
+      // date must be today or later, within current month
+      if (d < todayD) { setErr(t('errDate')); return; }
+      if (!sameMonth(d, now)) { setErr(t('errMonth')); return; }
+      if (calcHours(startTime, endTime) <= 0) { setErr(t('errTime')); return; }
+      // if date is today, ensure end time is in the future
+      if (d.getTime() === todayD.getTime()) {
+        const [eh, em] = endTime.split(':').map(Number);
+        const endDT = new Date(); endDT.setHours(eh, em, 0, 0);
+        if (endDT <= now) { setErr(t('errPastTime')); return; }
+      }
+      let workers = Array.from(selected);
+      if (includeSelf && !workers.includes(leader.id)) workers.push(leader.id);
+      if (workers.length === 0) { setErr(t('errNoWorkers')); return; }
+      const ticket = {
+        id: `t-${Date.now()}`,
+        date, startTime, endTime,
+        workerIds: workers,
+        createdBy: leader.id,
+        teamId: leader.teamId,
+        reason: reason.trim(),
+        status: STATUS.DRAFT,
+        createdAt: new Date().toISOString(),
+      };
+      onCreate(ticket);
+    };
+
+    // Compute month limits for date input
+    const now = new Date();
+    const minDate = todayYMD();
+    const maxDate = ymd(endOfMonth(now));
+
+    return (
+      <div className="fixed inset-0 bg-slate-900/40 z-50 flex items-center justify-center p-4 fade-in">
+        <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-auto scroll-soft">
+          <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+            <h2 className="text-lg font-bold text-slate-800">{t('createTicket')}</h2>
+            <button onClick={onClose} className="text-slate-400 hover:text-slate-700 text-2xl leading-none">×</button>
+          </div>
+          <form onSubmit={submit} className="p-6 space-y-5">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">{t('date')}</label>
+                <input type="date" value={date} min={minDate} max={maxDate} onChange={e=>setDate(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200" required />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">{t('startTime')}</label>
+                <input type="time" value={startTime} onChange={e=>setStart(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200" required />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">{t('endTime')}</label>
+                <input type="time" value={endTime} onChange={e=>setEnd(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200" required />
+              </div>
+            </div>
+            <div className="text-xs text-slate-500">
+              {t('durationHours')}: <span className="font-semibold text-slate-800">{round1(calcHours(startTime, endTime))} {t('hoursShort')}</span>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">{t('reason')}</label>
+              <input value={reason} onChange={e=>setReason(e.target.value)} placeholder={t('reasonPh')}
+                className="w-full px-3 py-2 rounded-lg border border-slate-200" />
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-xs font-semibold text-slate-600">{t('workers')} ({selected.size})</label>
+                <div className="flex gap-2">
+                  <button type="button" onClick={()=>setSelected(new Set(teamWorkers.map(u => u.id)))} className="text-xs text-brand-600 hover:underline">{t('selectAll')}</button>
+                  <button type="button" onClick={()=>setSelected(new Set())} className="text-xs text-slate-500 hover:underline">{t('clear')}</button>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {teamWorkers.map(w => (
+                  <label key={w.id} className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition ${selected.has(w.id) ? 'bg-brand-50 border-brand-300' : 'bg-white border-slate-200 hover:border-slate-300'}`}>
+                    <input type="checkbox" className="accent-brand-600" checked={selected.has(w.id)} onChange={()=>toggle(w.id)} />
+                    <span className="text-sm text-slate-700">{w.name}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <label className="flex items-center gap-2">
+              <input type="checkbox" className="accent-brand-600" checked={includeSelf} onChange={e=>setIncludeSelf(e.target.checked)} />
+              <span className="text-sm text-slate-700">{t('includeSelf')}</span>
+            </label>
+            {err && <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{err}</div>}
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+              <Button type="button" variant="ghost" onClick={onClose}>{t('cancel')}</Button>
+              <Button type="submit">{t('submit')}</Button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  /* -------------------- Ticket Detail Modal -------------------- */
+  function TicketDetail({ ticket, onClose, users }) {
+    const { t, lang } = useT();
+    if (!ticket) return null;
+    const creator = users.find(u => u.id === ticket.createdBy);
+    const workers = ticket.workerIds.map(id => users.find(u => u.id === id)).filter(Boolean);
+    const duration = round1(calcHours(ticket.startTime, ticket.endTime));
+    return (
+      <div className="fixed inset-0 bg-slate-900/40 z-50 flex items-center justify-center p-4 fade-in">
+        <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg">
+          <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+            <h2 className="text-lg font-bold text-slate-800">{t('ticketDetail')}</h2>
+            <button onClick={onClose} className="text-slate-400 hover:text-slate-700 text-2xl leading-none">×</button>
+          </div>
+          <div className="p-6 space-y-4">
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div><div className="text-xs text-slate-500">{t('date')}</div><div className="font-semibold text-slate-800">{formatDateLocale(ticket.date, lang)}</div></div>
+              <div><div className="text-xs text-slate-500">{t('status')}</div>
+                <div>{ticket.status === STATUS.PUBLISHED
+                  ? <span className="px-2 py-0.5 text-xs rounded-full bg-emerald-100 text-emerald-700 font-semibold">{t('published')}</span>
+                  : <span className="px-2 py-0.5 text-xs rounded-full bg-amber-100 text-amber-700 font-semibold">{t('draft')}</span>}
+                </div>
+              </div>
+              <div><div className="text-xs text-slate-500">{t('startTime')}</div><div className="font-semibold text-slate-800">{ticket.startTime}</div></div>
+              <div><div className="text-xs text-slate-500">{t('endTime')}</div><div className="font-semibold text-slate-800">{ticket.endTime}</div></div>
+              <div><div className="text-xs text-slate-500">{t('durationHours')}</div><div className="font-semibold text-slate-800">{duration} {t('hoursShort')}</div></div>
+              <div><div className="text-xs text-slate-500">{t('by')}</div><div className="font-semibold text-slate-800">{creator? creator.name : '—'}</div></div>
+            </div>
+            {ticket.reason && (
+              <div>
+                <div className="text-xs text-slate-500">{t('reason')}</div>
+                <div className="text-sm text-slate-700">{ticket.reason}</div>
+              </div>
+            )}
+            <div>
+              <div className="text-xs text-slate-500 mb-1">{t('workers')} ({workers.length})</div>
+              <div className="flex flex-wrap gap-2">
+                {workers.map(w => (
+                  <span key={w.id} className="px-2 py-1 text-xs rounded-md bg-slate-100 text-slate-700">{w.name}</span>
+                ))}
+              </div>
+            </div>
+            <div className="flex justify-end pt-2 border-t border-slate-100">
+              <Button variant="ghost" onClick={onClose}>{t('close')}</Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* -------------------- Ticket Card -------------------- */
+  function TicketCard({ ticket, users, onApprove, onDelete, onOpen, canEdit }) {
+    const { t, lang } = useT();
+    const duration = round1(calcHours(ticket.startTime, ticket.endTime));
+    return (
+      <div onClick={onOpen} className="bg-white rounded-xl border border-slate-100 shadow-sm hover:shadow-md hover:border-slate-200 transition p-4 cursor-pointer">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="text-sm font-semibold text-slate-800">{formatDateLocale(ticket.date, lang)}</div>
+            <div className="text-xs text-slate-500 mt-0.5">{ticket.startTime} → {ticket.endTime} · <span className="font-medium text-slate-700">{duration} {t('hoursShort')}</span></div>
+          </div>
+          {ticket.status === STATUS.PUBLISHED
+            ? <span className="px-2 py-0.5 text-xs rounded-full bg-emerald-100 text-emerald-700 font-semibold whitespace-nowrap">{t('published')}</span>
+            : <span className="px-2 py-0.5 text-xs rounded-full bg-amber-100 text-amber-700 font-semibold whitespace-nowrap">{t('draft')}</span>}
+        </div>
+        {ticket.reason && <div className="text-xs text-slate-600 mt-2 italic">"{ticket.reason}"</div>}
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {ticket.workerIds.slice(0,4).map(id => {
+            const u = users.find(x => x.id === id);
+            return u ? <span key={id} className="text-xs px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">{u.name}</span> : null;
+          })}
+          {ticket.workerIds.length > 4 && <span className="text-xs text-slate-500 px-1">+{ticket.workerIds.length - 4}</span>}
+        </div>
+        {canEdit && (
+          <div className="mt-3 pt-3 border-t border-slate-100 flex justify-end gap-2" onClick={e=>e.stopPropagation()}>
+            {ticket.status === STATUS.DRAFT && <Button variant="success" onClick={onApprove}>{t('approve')}</Button>}
+            <Button variant="danger" onClick={onDelete}>{t('delete')}</Button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  /* -------------------- Leader Dashboard -------------------- */
+  function LeaderDashboard() {
+    const { t, lang } = useT();
+    const { user } = useAuth();
+    const { tickets, add, update, remove } = useTickets();
+    const users = load(STORAGE_KEYS.USERS, SEED_USERS);
+
+    const [filter, setFilter] = useState({ mode: 'month', day: todayYMD() });
+    const [showCreate, setShowCreate] = useState(false);
+    const [detail, setDetail] = useState(null);
+
+    const myTickets = useMemo(() => tickets.filter(tk => tk.createdBy === user.id), [tickets, user]);
+    const range = filterRange(filter);
+    const filtered = useMemo(() => myTickets.filter(tk => inRange(tk.date, range)).sort((a,b) => b.date.localeCompare(a.date) || b.startTime.localeCompare(a.startTime)),
+      [myTickets, filter]);
+    const stats = useMemo(() => computeStats(filtered, users), [filtered]);
+
+    const onCreate = (tk) => { add(tk); setShowCreate(false); };
+    const onApprove = (id) => update(id, { status: STATUS.PUBLISHED });
+    const onDelete = (id) => { if (confirm(t('confirmDelete'))) remove(id); };
+
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-800">{t('myTickets')}</h1>
+            <p className="text-sm text-slate-500">{getTeamLabel(user.teamId, t)}</p>
+          </div>
+          <Button onClick={()=>setShowCreate(true)}>{t('newTicket')}</Button>
+        </div>
+
+        <Card className="p-4">
+          <FilterBar filter={filter} setFilter={setFilter} />
+          <div className="text-xs text-slate-500 mt-2">{t('summaryFor')}: <span className="font-semibold text-slate-700">{rangeLabel(filter, t, lang)}</span></div>
+        </Card>
+
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatTile label={t('totalHours')} value={`${round1(stats.totalHours)} ${t('hoursShort')}`} accent="brand" />
+          <StatTile label={t('uniqueWorkers')} value={stats.uniqueWorkers} accent="green" />
+          <StatTile label={t('avgPerWorker')} value={`${round1(stats.avgPerWorker)} ${t('hoursShort')}`} accent="amber" />
+          <StatTile label={t('totalSessions')} value={stats.ticketCount} accent="brand" />
+        </div>
+
+        {filtered.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {filtered.map(tk => (
+              <TicketCard key={tk.id} ticket={tk} users={users}
+                onApprove={()=>onApprove(tk.id)} onDelete={()=>onDelete(tk.id)}
+                onOpen={()=>setDetail(tk)} canEdit={true} />
+            ))}
+          </div>
+        ) : (
+          <Card className="p-8 text-center">
+            <div className="text-slate-500">{t('noTickets')}</div>
+            <div className="text-xs text-slate-400 mt-1">{t('noTicketsCreate')}</div>
+          </Card>
+        )}
+
+        {showCreate && <CreateTicketModal onClose={()=>setShowCreate(false)} onCreate={onCreate} leader={user} allUsers={users} />}
+        {detail && <TicketDetail ticket={detail} onClose={()=>setDetail(null)} users={users} />}
+      </div>
+    );
+  }
+
+  /* -------------------- Worker Dashboard -------------------- */
+  function WorkerDashboard() {
+    const { t, lang } = useT();
+    const { user } = useAuth();
+    const { tickets } = useTickets();
+    const users = load(STORAGE_KEYS.USERS, SEED_USERS);
+    const [detail, setDetail] = useState(null);
+
+    const myTickets = useMemo(() =>
+      tickets.filter(tk => tk.status === STATUS.PUBLISHED && tk.workerIds.includes(user.id)),
+      [tickets, user]
+    );
+
+    const now = new Date();
+    const monthStart = startOfMonth(now);
+    const monthEnd = endOfMonth(now);
+    const myMonth = myTickets.filter(tk => {
+      const d = parseYMD(tk.date);
+      return d >= monthStart && d <= monthEnd;
+    });
+    const totalHours = myMonth.reduce((s, tk) => s + calcHours(tk.startTime, tk.endTime), 0);
+    const totalSessions = myMonth.length;
+    const avg = totalSessions ? totalHours / totalSessions : 0;
+
+    // Build per-day list for this month up to today
+    const days = [];
+    for (let d = new Date(monthStart); d <= now; d.setDate(d.getDate()+1)) {
+      const ds = ymd(d);
+      const dayTickets = myMonth.filter(tk => tk.date === ds);
+      const hours = dayTickets.reduce((s, tk) => s + calcHours(tk.startTime, tk.endTime), 0);
+      days.push({ date: ds, dateObj: new Date(d), tickets: dayTickets, hours });
+    }
+    days.reverse();
+
+    return (
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">{t('hello')}, {user.name}</h1>
+          <p className="text-sm text-slate-500">{getTeamLabel(user.teamId, t)}</p>
+        </div>
+
+        <div className="grid grid-cols-3 gap-4">
+          <StatTile label={t('totalHours')} value={`${round1(totalHours)} ${t('hoursShort')}`} accent="brand" />
+          <StatTile label={t('totalSessions')} value={totalSessions} accent="green" />
+          <StatTile label={t('avgPerSession')} value={`${round1(avg)} ${t('hoursShort')}`} accent="amber" />
+        </div>
+
+        <Card className="p-0 overflow-hidden">
+          <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
+            <h2 className="font-semibold text-slate-800">{t('dailyOvertime')}</h2>
+            <div className="text-xs text-slate-500">{rangeLabel({mode:'month'}, t, lang)}</div>
+          </div>
+          <div className="divide-y divide-slate-100">
+            {days.map(d => (
+              <div key={d.date} className="px-5 py-3 flex items-center gap-4">
+                <div className="w-32">
+                  <div className="text-sm font-semibold text-slate-800">{formatDateLocale(d.date, lang)}</div>
+                </div>
+                <div className="flex-1">
+                  {d.tickets.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {d.tickets.map(tk => (
+                        <button key={tk.id} onClick={()=>setDetail(tk)} className="text-xs px-2 py-1 rounded-md bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition">
+                          {tk.startTime}–{tk.endTime} · {round1(calcHours(tk.startTime, tk.endTime))}{t('hoursShort')}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-xs text-slate-400">{t('notRecorded')}</span>
+                  )}
+                </div>
+                <div className="w-24 text-right">
+                  {d.hours > 0
+                    ? <span className="text-sm font-semibold text-emerald-700">{round1(d.hours)} {t('hoursShort')}</span>
+                    : <span className="text-xs text-slate-300">—</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        {detail && <TicketDetail ticket={detail} onClose={()=>setDetail(null)} users={users} />}
+      </div>
+    );
+  }
+
+  /* -------------------- Manager Dashboard -------------------- */
+  function ManagerDashboard() {
+    const { t, lang } = useT();
+    const { tickets } = useTickets();
+    const users = load(STORAGE_KEYS.USERS, SEED_USERS);
+    const [filter, setFilter] = useState({ mode: 'month', day: todayYMD() });
+    const [detail, setDetail] = useState(null);
+
+    const range = filterRange(filter);
+    const filtered = useMemo(() => tickets.filter(tk => tk.status === STATUS.PUBLISHED && inRange(tk.date, range)),
+      [tickets, filter]);
+    const stats = useMemo(() => computeStats(filtered, users), [filtered]);
+
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">{t('companyOverview')}</h1>
+          <p className="text-sm text-slate-500">{t('mgmt')}</p>
+        </div>
+
+        <Card className="p-4">
+          <FilterBar filter={filter} setFilter={setFilter} />
+          <div className="text-xs text-slate-500 mt-2">{t('summaryFor')}: <span className="font-semibold text-slate-700">{rangeLabel(filter, t, lang)}</span></div>
+        </Card>
+
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatTile label={t('totalHours')} value={`${round1(stats.totalHours)} ${t('hoursShort')}`} accent="brand" />
+          <StatTile label={t('uniqueWorkers')} value={stats.uniqueWorkers} accent="green" />
+          <StatTile label={t('avgPerWorker')} value={`${round1(stats.avgPerWorker)} ${t('hoursShort')}`} accent="amber" />
+          <StatTile label={t('totalSessions')} value={stats.ticketCount} accent="brand" />
+        </div>
+
+        <Card className="p-0 overflow-hidden">
+          <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
+            <h2 className="font-semibold text-slate-800">{t('perPerson')}</h2>
+          </div>
+          {stats.perPerson.length === 0 ? (
+            <div className="px-5 py-10 text-center text-sm text-slate-500">{t('noData')}</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+                  <tr>
+                    <th className="px-5 py-2 text-left font-semibold">{t('name')}</th>
+                    <th className="px-5 py-2 text-left font-semibold">{t('role')}</th>
+                    <th className="px-5 py-2 text-left font-semibold">{t('team')}</th>
+                    <th className="px-5 py-2 text-right font-semibold">{t('times')}</th>
+                    <th className="px-5 py-2 text-right font-semibold">{t('totalHours')}</th>
+                    <th className="px-5 py-2 text-right font-semibold">{t('averageH')}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {stats.perPerson.map(row => row.user && (
+                    <tr key={row.user.id} className="hover:bg-slate-50">
+                      <td className="px-5 py-2.5 font-medium text-slate-800">{row.user.name}</td>
+                      <td className="px-5 py-2.5"><RoleBadge role={row.user.role} t={t} /></td>
+                      <td className="px-5 py-2.5 text-slate-600">{getTeamLabel(row.user.teamId, t)}</td>
+                      <td className="px-5 py-2.5 text-right">{row.count}</td>
+                      <td className="px-5 py-2.5 text-right font-semibold text-brand-700">{round1(row.hours)}</td>
+                      <td className="px-5 py-2.5 text-right">{round1(row.avg)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
+
+        <Card className="p-0 overflow-hidden">
+          <div className="px-5 py-3 border-b border-slate-100">
+            <h2 className="font-semibold text-slate-800">{t('allTickets')} — {filtered.length}</h2>
+          </div>
+          {filtered.length === 0 ? (
+            <div className="px-5 py-10 text-center text-sm text-slate-500">{t('noData')}</div>
+          ) : (
+            <div className="p-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {filtered.sort((a,b) => b.date.localeCompare(a.date)).map(tk => (
+                <TicketCard key={tk.id} ticket={tk} users={users} onOpen={()=>setDetail(tk)} canEdit={false} />
+              ))}
+            </div>
+          )}
+        </Card>
+
+        {detail && <TicketDetail ticket={detail} onClose={()=>setDetail(null)} users={users} />}
+      </div>
+    );
+  }
+
+  /* -------------------- App Root -------------------- */
+  function AppRoot() {
+    const { user } = useAuth();
+    if (!user) return <><LoginPage /><LanguageSwitcher /><CreditChip /></>;
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <main className="flex-1 pb-24">
+          {user.role === ROLES.MANAGER && <ManagerDashboard />}
+          {user.role === ROLES.LEADER && <LeaderDashboard />}
+          {user.role === ROLES.WORKER && <WorkerDashboard />}
+        </main>
+        <LanguageSwitcher />
+        <CreditChip />
+      </div>
+    );
+  }
+
+  function App() {
+    return (
+      <I18nProvider>
+        <AuthProvider>
+          <AppRoot />
+        </AuthProvider>
+      </I18nProvider>
+    );
+  }
+
+  const root = ReactDOM.createRoot(document.getElementById('root'));
+  root.render(<App />);
+  </script>
+</body>
+</html>
